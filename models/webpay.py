@@ -9,20 +9,22 @@ from openerp import api, models, fields, _
 from openerp.tools import float_round, DEFAULT_SERVER_DATE_FORMAT
 from openerp.tools.float_utils import float_compare, float_repr
 from openerp.tools.safe_eval import safe_eval
+from base64 import b64decode
 
 _logger = logging.getLogger(__name__)
 try:
     from suds.client import Client
     from suds.wsse import Security, Timestamp
-    from wsse.suds import WssePlugin
+    from .wsse.suds import WssePlugin
+    from suds.transport.https import HttpTransport
 except:
     _logger.info("No Load suds or wsse")
 
-URLS = dict({
+URLS ={
     'integ': 'https://webpay3gint.transbank.cl/WSWebpayTransaction/cxf/WSWebpayService?wsdl',
     'test': 'https://webpay3gint.transbank.cl/WSWebpayTransaction/cxf/WSWebpayService?wsdl',
     'prod': 'https://webpay3g.transbank.cl//WSWebpayTransaction/cxf/WSWebpayService?wsdl',
-})
+}
 
 class PaymentAcquirerWebpay(models.Model):
     _inherit = 'payment.acquirer'
@@ -41,7 +43,18 @@ class PaymentAcquirerWebpay(models.Model):
         string="User Public Cert",)
     webpay_cert = fields.Binary(
         string='Webpay Cert',)
-    environment = fields.Selection(selection_add=[('integ', 'Integración')])
+    webpay_mode = fields.Selection(
+        [
+            ('normal', "Normal"),
+            ('mall', "Normal Mall"),
+            ('oneclick', "OneClick"),
+            ('completa', "Completa"),
+        ],
+        string="Webpay Mode",
+        )
+    environment = fields.Selection(
+        selection_add=[('integ', 'Integración')],
+        )
 
     @api.multi
     def _get_feature_support(self):
@@ -49,8 +62,7 @@ class PaymentAcquirerWebpay(models.Model):
         res['fees'].append('webpay')
         return res
 
-    @api.multi
-    def get_webpay_urls(self):
+    def _get_webpay_urls(self):
         url = URLS[self.environment]
         return url
 
@@ -72,25 +84,40 @@ class PaymentAcquirerWebpay(models.Model):
             'zip_code': values.get('partner_zip'),
             'first_name': values.get('partner_first_name'),
             'last_name': values.get('partner_last_name'),
+            'return_url': base_url + "/my/transaction/" + str(self.id)
         })
         return values
 
-    def webpay_get_form_action_url(self, cr, uid, id, context=None):
-        acquirer = self.browse(cr, uid, id, context=context)
-        return self._get_webpay_urls(cr, uid, acquirer.environment, context=context)
+    @api.multi
+    def webpay_get_form_action_url(self,):
+        base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url')
+        return base_url +'/payment/webpay/redirect'
 
     def get_private_key(self):
-        filecontent = base64.b64decode(self.key_file)
+        return b64decode(self.webpay_private_key)
 
-    def get_private_key(self):
-        filecontent = base64.b64decode(self.key_file)
+    def get_public_cert(self):
+        return b64decode(self.webpay_public_cert)
 
-    def get_private_key(self):
-        filecontent = base64.b64decode(self.key_file)
+    def get_WebPay_cert(self):
+        return b64decode(self.webpay_cert)
 
+    def get_client(self,):
+        transport=HttpTransport()
+        wsse = Security()
 
-class PaymentTxWebpay(models.Model):
-    _inherit = 'payment.transaction'
+        return Client(
+            self._get_webpay_urls(),
+            transport=transport,
+            wsse=wsse,
+            plugins=[
+                WssePlugin(
+                    keyfile=self.get_private_key(),
+                    certfile=self.get_public_cert(),
+                    their_certfile=self.get_WebPay_cert(),
+                ),
+            ],
+        )
 
     """
     initTransaction
@@ -98,33 +125,38 @@ class PaymentTxWebpay(models.Model):
     Permite inicializar una transaccion en Webpay.
     Como respuesta a la invocacion se genera un token que representa en forma unica una transaccion.
     """
-    def initTransaction(self, amount, buyOrder, sessionId, urlReturn, urlFinal):
+    def initTransaction(self, post, buyOrder=1123, sessionId=2):
 
-        client = WebpayNormal.get_client(url, config.get_private_key(), config.get_public_cert(), config.getWebPayCert())
-        client.options.cache.clear();
+        client = self.get_client()
+        client.options.cache.clear()
         init = client.factory.create('wsInitTransactionInput')
 
         init.wSTransactionType = client.factory.create('wsTransactionType').TR_NORMAL_WS
 
-        init.commerceId = config.getCommerceCode();
+        init.commerceId = self.webpay_commer_code
 
-        init.buyOrder = buyOrder;
-        init.sessionId = sessionId;
-        init.returnURL = urlReturn;
-        init.finalURL = urlFinal;
+        init.buyOrder = buyOrder
+        init.sessionId = sessionId
+        init.returnURL = post['return_url']
+        init.finalURL = post['return_url']
 
-        detail = client.factory.create('wsTransactionDetail');
-        detail.amount = amount;
+        detail = client.factory.create('wsTransactionDetail')
+        detail.amount = post['amount']
 
-        detail.commerceCode = config.getCommerceCode();
-        detail.buyOrder = buyOrder;
+        detail.commerceCode = self.webpay_commer_code
+        detail.buyOrder = buyOrder
 
-        init.transactionDetails.append(detail);
-        init.wPMDetail=client.factory.create('wpmDetailInput');
+        init.transactionDetails.append(detail)
+        init.wPMDetail=client.factory.create('wpmDetailInput')
 
-        wsInitTransactionOutput = client.service.initTransaction(init);
+        wsInitTransactionOutput = client.service.initTransaction(init)
+        _logger.info(wsInitTransactionOutput)
 
-        return wsInitTransactionOutput;
+        return wsInitTransactionOutput
+
+
+class PaymentTxWebpay(models.Model):
+    _inherit = 'payment.transaction'
 
     """
     getTransaction
@@ -134,13 +166,13 @@ class PaymentTxWebpay(models.Model):
     """
     def getTransaction(self, token):
 
-        client = WebpayNormal.get_client(url, config.getPrivateKey(), config.getPublicCert(), config.getWebPayCert());
-        client.options.cache.clear();
+        client = WebpayNormal.get_client(url, config.getPrivateKey(), config.getPublicCert(), config.getWebPayCert())
+        client.options.cache.clear()
 
-    	transactionResultOutput = client.service.getTransactionResult(token);
-    	acknowledge = WebpayNormal.acknowledgeTransaction(token);
+    	transactionResultOutput = client.service.getTransactionResult(token)
+    	acknowledge = WebpayNormal.acknowledgeTransaction(token)
 
-        return transactionResultOutput;
+        return transactionResultOutput
 
 
     """
@@ -148,31 +180,12 @@ class PaymentTxWebpay(models.Model):
     Indica  a Webpay que se ha recibido conforme el resultado de la transaccion
     """
     def acknowledgeTransaction(self, token):
-        client = WebpayNormal.get_client(url, config.getPrivateKey(), config.getPublicCert(), config.getWebPayCert());
-        client.options.cache.clear();
+        client = WebpayNormal.get_client(url, config.getPrivateKey(), config.getPublicCert(), config.getWebPayCert())
+        client.options.cache.clear()
 
-        acknowledge = client.service.acknowledgeTransaction(token);
+        acknowledge = client.service.acknowledgeTransaction(token)
 
-        return acknowledge;
-
-
-    def get_client(self, wsdl_url, our_keyfile_path, our_certfile_path, their_certfile_path):
-
-        transport=HttpTransport()
-        wsse = Security()
-
-        return Client(
-            wsdl_url,
-            transport=transport,
-            wsse=wsse,
-            plugins=[
-                WssePlugin(
-                    keyfile=our_keyfile_path,
-                    certfile=our_certfile_path,
-                    their_certfile=their_certfile_path,
-                ),
-            ],
-        )
+        return acknowledge
 
 class PaymentMethod(models.Model):
     _inherit = 'payment.method'
