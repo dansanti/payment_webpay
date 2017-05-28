@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<openerp>
+    <data>
+
+        <record id="acquirer_form_webpay" model="ir.ui.view">
+            <field name="name">acquirer.form.webpay</field>
+            <field name="model">payment.acquirer</field>
+            <field name="inherit_id" ref="payment.acquirer_form"/>
+            <field name="arch" type="xml">
+              <field name="environment" position="after">
+                <field name="webpay_mode" attrs="{'invisible':[('provider','!=','webpay')]}"/>
+              </field>
+                <xpath expr='//group[@name="acquirer"]' position='after'>
+                  <group>
+                    <field name="webpay_commer_code" />
+                  </group>
+                    <group attrs="{'invisible': [('provider', '!=', 'webpay')]}">
+                        <field name="webpay_private_key"/>
+                        <field name="webpay_public_cert"/>
+                        <field name="webpay_cert"/>
+                        <a colspan="2" href="http://odoocoop.cl//test-account-creation" target="_blank">How to configure your Webpay account?</a>
+                    </group>
+
+                </xpath>
+            </field>
+        </record>
+
+    </data>
+</openerp>
