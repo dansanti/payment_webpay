@@ -3,7 +3,7 @@
     <data>
         <template id="webpay_acquirer_button">
             <form t-if="acquirer.webpay_commer_code" t-att-action="tx_url" method="post" target="_self">
-                <input type="hidden" name="cmd" t-att-value="cmd"/>
+                <input type="hidden" name="item_number" t-att-value="item_number"/>
                 <input type="hidden" name="business" t-att-value="business"/>
                 <input type="hidden" name="amount" t-att-value="amount"/>
                 <input t-if="handling" type="hidden" name="handling"

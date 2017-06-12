@@ -68,9 +68,9 @@ class PaymentAcquirerWebpay(models.Model):
 
     @api.multi
     def webpay_form_generate_values(self, values):
+        _logger.info(values)
         base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url')
         values.update({
-            'cmd': '_xclick',
             'business': self.company_id.name,
             'item_name': '%s: %s' % (self.company_id.name, values['reference']),
             'item_number': values['reference'],
@@ -84,7 +84,7 @@ class PaymentAcquirerWebpay(models.Model):
             'zip_code': values.get('partner_zip'),
             'first_name': values.get('partner_first_name'),
             'last_name': values.get('partner_last_name'),
-            'return_url': base_url + "/my/transaction/" + str(self.id)
+            'return_url': base_url + '/payment/webpay/final' 
         })
         return values
 
@@ -125,8 +125,9 @@ class PaymentAcquirerWebpay(models.Model):
     Permite inicializar una transaccion en Webpay.
     Como respuesta a la invocacion se genera un token que representa en forma unica una transaccion.
     """
-    def initTransaction(self, post, buyOrder=1123, sessionId=2):
-
+    def initTransaction(self, post):
+        _logger.info(post)
+        base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url')
         client = self.get_client()
         client.options.cache.clear()
         init = client.factory.create('wsInitTransactionInput')
@@ -135,16 +136,16 @@ class PaymentAcquirerWebpay(models.Model):
 
         init.commerceId = self.webpay_commer_code
 
-        init.buyOrder = buyOrder
-        init.sessionId = sessionId
-        init.returnURL = post['return_url']
-        init.finalURL = post['return_url']
+        init.buyOrder = post['item_number']
+        init.sessionId = self.company_id.id
+        init.returnURL = base_url + '/payment/webpay/return/'+str(self.id)
+        init.finalURL =  post['return_url']
 
         detail = client.factory.create('wsTransactionDetail')
         detail.amount = post['amount']
 
         detail.commerceCode = self.webpay_commer_code
-        detail.buyOrder = buyOrder
+        detail.buyOrder = post['item_number']
 
         init.transactionDetails.append(detail)
         init.wPMDetail=client.factory.create('wpmDetailInput')
@@ -158,19 +159,29 @@ class PaymentAcquirerWebpay(models.Model):
 class PaymentTxWebpay(models.Model):
     _inherit = 'payment.transaction'
 
+    webpay_txn_type = fields.Selection([
+            ('VD','Venta Debito'),
+            ('VN','Venta Normal'),
+            ('VC','Venta en cuotas'),
+            ('SI','3 cuotas sin interés'),
+            ('S2','cuotas sin interés'),
+            ('NC','N Cuotas sin interés'),
+        ],
+       string="Webpay Tipo Transacción")
+
     """
     getTransaction
 
     Permite obtener el resultado de la transaccion una vez que
     Webpay ha resuelto su autorizacion financiera.
     """
-    def getTransaction(self, token):
-
-        client = WebpayNormal.get_client(url, config.getPrivateKey(), config.getPublicCert(), config.getWebPayCert())
+    @api.multi
+    def getTransaction(self, acquirer_id, token):
+        client = acquirer_id.get_client()
         client.options.cache.clear()
 
     	transactionResultOutput = client.service.getTransactionResult(token)
-    	acknowledge = WebpayNormal.acknowledgeTransaction(token)
+    	acknowledge = self.acknowledgeTransaction(acquirer_id, token)
 
         return transactionResultOutput
 
@@ -179,13 +190,62 @@ class PaymentTxWebpay(models.Model):
     acknowledgeTransaction
     Indica  a Webpay que se ha recibido conforme el resultado de la transaccion
     """
-    def acknowledgeTransaction(self, token):
-        client = WebpayNormal.get_client(url, config.getPrivateKey(), config.getPublicCert(), config.getWebPayCert())
+    def acknowledgeTransaction(self, acquirer_id, token):
+        client = acquirer_id.get_client()
         client.options.cache.clear()
-
         acknowledge = client.service.acknowledgeTransaction(token)
-
         return acknowledge
+
+    def _webpay_form_get_tx_from_data(self, cr, uid, data, context=None):
+        reference, txn_id = data.buyOrder, data.sessionId
+        if not reference or not txn_id:
+            error_msg = _('Webpay: received data with missing reference (%s) or txn_id (%s)') % (reference, txn_id)
+            _logger.info(error_msg)
+            raise ValidationError(error_msg)
+
+        # find tx -> @TDENOTE use txn_id ?
+        tx_ids = self.pool['payment.transaction'].search(cr, uid, [('reference', '=', reference)], context=context)
+        if not tx_ids or len(tx_ids) > 1:
+            error_msg = 'Webpay: received data for reference %s' % (reference)
+            if not tx_ids:
+                error_msg += '; no order found'
+            else:
+                error_msg += '; multiple order found'
+            _logger.info(error_msg)
+            raise ValidationError(error_msg)
+        return self.browse(cr, uid, tx_ids[0], context=context)
+
+    def _webpay_form_validate(self, cr, uid, tx, data, context=None):
+        '''
+        codes = 0 Transacción aprobada.
+                -1 Rechazo de transacción.
+                -2 Transacción debe reintentarse.
+                -3 Error en transacción.
+                -4 Rechazo de transacción.
+                -5 Rechazo por error de tasa.
+                -6 Excede cupo máximo mensual.
+                -7 Excede límite diario por transacción.
+                -8 Rubro no autorizado.
+        '''
+        status = str(data.detailOutput[0].responseCode)
+        res = {
+            'acquirer_reference': data.sessionId,
+            'webpay_txn_type': data.detailOutput[0].paymentTypeCode,
+        }
+        if status in ['0']:
+            _logger.info('Validated webpay payment for tx %s: set as done' % (tx.reference))
+
+            res.update(state='done', date_validate=data.transactionDate)
+            return tx.write(res)
+        elif status in ['-6', '-7']:
+            _logger.info('Received notification for webpay payment %s: set as pending' % (tx.reference))
+            res.update(state='pending', state_message=data.get('pending_reason', ''))
+            return tx.write(res)
+        else:
+            error = 'Received unrecognized status for webpay payment %s: %s, set as error' % (tx.reference, status)
+            _logger.info(error)
+            res.update(state='error', state_message=error)
+            return tx.write(res)
 
 class PaymentMethod(models.Model):
     _inherit = 'payment.method'
