@@ -1,7 +1,7 @@
 # Pasarela de pagos Webpay para Odoo
 
 - Nos basamos en payment_paypal y payment_ogone
-- Aún No funcional al 100%
+- Funcional
 - Falta enviar Detalle completo, solamente se está enviando detalle demo
 - Falta Procesar las respuestas de Webpay
 - Se modifica a medida de Odoo la librería wsse
