@@ -6,7 +6,7 @@
     'author': 'Daniel Santibáñez Polanco',
     'summary': 'Payment Acquirer: Webpay Implementation',
     'website': 'https://odoocoop.cl',
-    'version': "9.0.5.0",
+    'version': "9.1.0.0",
     'description': """Webpay Payment Acquirer""",
     'depends': ['payment'],
     'python-depends':[

@@ -68,7 +68,6 @@ class PaymentAcquirerWebpay(models.Model):
 
     @api.multi
     def webpay_form_generate_values(self, values):
-        _logger.info(values)
         base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url')
         values.update({
             'business': self.company_id.name,
@@ -84,7 +83,7 @@ class PaymentAcquirerWebpay(models.Model):
             'zip_code': values.get('partner_zip'),
             'first_name': values.get('partner_first_name'),
             'last_name': values.get('partner_last_name'),
-            'return_url': base_url + '/payment/webpay/final' 
+            'return_url': base_url + '/payment/webpay/final'
         })
         return values
 
@@ -126,7 +125,6 @@ class PaymentAcquirerWebpay(models.Model):
     Como respuesta a la invocacion se genera un token que representa en forma unica una transaccion.
     """
     def initTransaction(self, post):
-        _logger.info(post)
         base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url')
         client = self.get_client()
         client.options.cache.clear()
@@ -151,7 +149,6 @@ class PaymentAcquirerWebpay(models.Model):
         init.wPMDetail=client.factory.create('wpmDetailInput')
 
         wsInitTransactionOutput = client.service.initTransaction(init)
-        _logger.info(wsInitTransactionOutput)
 
         return wsInitTransactionOutput
 
@@ -211,30 +208,29 @@ class PaymentTxWebpay(models.Model):
                 error_msg += '; no order found'
             else:
                 error_msg += '; multiple order found'
-            _logger.info(error_msg)
+            _logger.warning(error_msg)
             raise ValidationError(error_msg)
         return self.browse(cr, uid, tx_ids[0], context=context)
 
     def _webpay_form_validate(self, cr, uid, tx, data, context=None):
-        '''
-        codes = 0 Transacción aprobada.
-                -1 Rechazo de transacción.
-                -2 Transacción debe reintentarse.
-                -3 Error en transacción.
-                -4 Rechazo de transacción.
-                -5 Rechazo por error de tasa.
-                -6 Excede cupo máximo mensual.
-                -7 Excede límite diario por transacción.
-                -8 Rubro no autorizado.
-        '''
+        codes = {
+                '0' : 'Transacción aprobada.',
+                '-1' : 'Rechazo de transacción.',
+                '-2' : 'Transacción debe reintentarse.',
+                '-3' : 'Error en transacción.',
+                '-4' : 'Rechazo de transacción.',
+                '-5' : 'Rechazo por error de tasa.',
+                '-6' : 'Excede cupo máximo mensual.',
+                '-7' : 'Excede límite diario por transacción.',
+                '-8' : 'Rubro no autorizado.',
+            }
         status = str(data.detailOutput[0].responseCode)
         res = {
-            'acquirer_reference': data.sessionId,
+            'acquirer_reference': data.detailOutput[0].authorizationCode,
             'webpay_txn_type': data.detailOutput[0].paymentTypeCode,
         }
         if status in ['0']:
             _logger.info('Validated webpay payment for tx %s: set as done' % (tx.reference))
-
             res.update(state='done', date_validate=data.transactionDate)
             return tx.write(res)
         elif status in ['-6', '-7']:
@@ -242,8 +238,8 @@ class PaymentTxWebpay(models.Model):
             res.update(state='pending', state_message=data.get('pending_reason', ''))
             return tx.write(res)
         else:
-            error = 'Received unrecognized status for webpay payment %s: %s, set as error' % (tx.reference, status)
-            _logger.info(error)
+            error = 'Received unrecognized status for webpay payment %s: %s, set as error' % (tx.reference, codes[status].decode('utf-8'))
+            _logger.warning(error)
             res.update(state='error', state_message=error)
             return tx.write(res)
 
