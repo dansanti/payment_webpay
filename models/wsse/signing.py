@@ -179,10 +179,10 @@ def verify(envelope, certfile):
         ctx.register_id(referenced, 'Id', WSU_NS)
 
     try :
- 	key = xmlsec.Key.from_memory(certfile, xmlsec.KeyFormat.CERT_PEM, None)
-	ctx.key = key
+        key = xmlsec.Key.from_memory(certfile, xmlsec.KeyFormat.CERT_PEM, None)
+        ctx.key = key
     except :
-	sys.exit()
+        sys.exit()
 
     try:
         ctx.verify(signature)
