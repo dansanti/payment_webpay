@@ -18,7 +18,7 @@ try:
     from .wsse.suds import WssePlugin
     from suds.transport.https import HttpTransport
 except:
-    _logger.info("No Load suds or wsse")
+    _logger.warning("No Load suds or wsse")
 
 URLS ={
     'integ': 'https://webpay3gint.transbank.cl/WSWebpayTransaction/cxf/WSWebpayService?wsdl',
@@ -177,8 +177,8 @@ class PaymentTxWebpay(models.Model):
         client = acquirer_id.get_client()
         client.options.cache.clear()
 
-    	transactionResultOutput = client.service.getTransactionResult(token)
-    	acknowledge = self.acknowledgeTransaction(acquirer_id, token)
+        transactionResultOutput = client.service.getTransactionResult(token)
+        acknowledge = self.acknowledgeTransaction(acquirer_id, token)
 
         return transactionResultOutput
 
@@ -234,7 +234,7 @@ class PaymentTxWebpay(models.Model):
             res.update(state='done', date_validate=data.transactionDate)
             return tx.write(res)
         elif status in ['-6', '-7']:
-            _logger.info('Received notification for webpay payment %s: set as pending' % (tx.reference))
+            _logger.warning('Received notification for webpay payment %s: set as pending' % (tx.reference))
             res.update(state='pending', state_message=data.get('pending_reason', ''))
             return tx.write(res)
         else:
