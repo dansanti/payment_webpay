@@ -4,9 +4,9 @@ import pprint
 import werkzeug
 import urllib2
 
-from openerp import http, SUPERUSER_ID
-from openerp.addons.web.http import request
-from openerp.addons.payment.models.payment_acquirer import ValidationError
+from odoo import http, SUPERUSER_ID
+from odoo.addons.web.http import request
+from odoo.addons.payment.models.payment_acquirer import ValidationError
 
 _logger = logging.getLogger(__name__)
 

@@ -4,11 +4,12 @@ import datetime
 from hashlib import sha1
 import logging
 import socket
-from openerp import SUPERUSER_ID
-from openerp import api, models, fields, _
-from openerp.tools import float_round, DEFAULT_SERVER_DATE_FORMAT
-from openerp.tools.float_utils import float_compare, float_repr
-from openerp.tools.safe_eval import safe_eval
+from odoo import SUPERUSER_ID
+from odoo import api, models, fields
+from odoo.tools import float_round, DEFAULT_SERVER_DATE_FORMAT
+from odoo.tools.float_utils import float_compare, float_repr
+from odoo.tools.safe_eval import safe_eval
+from odoo.tools.translate import _
 from base64 import b64decode
 
 _logger = logging.getLogger(__name__)
@@ -36,24 +37,29 @@ class PaymentAcquirerWebpay(models.Model):
         return providers
 
     webpay_commer_code = fields.Char(
-        string="Commerce Code",)
+            string="Commerce Code",
+            required=True,
+        )
     webpay_private_key = fields.Binary(
-        string="User Private Key",)
+            string="User Private Key",
+        )
     webpay_public_cert = fields.Binary(
-        string="User Public Cert",)
+            string="User Public Cert",
+        )
     webpay_cert = fields.Binary(
-        string='Webpay Cert',)
+            string='Webpay Cert',
+        )
     webpay_mode = fields.Selection(
-        [
-            ('normal', "Normal"),
-            ('mall', "Normal Mall"),
-            ('oneclick', "OneClick"),
-            ('completa', "Completa"),
-        ],
-        string="Webpay Mode",
+            [
+                ('normal', "Normal"),
+                ('mall', "Normal Mall"),
+                ('oneclick', "OneClick"),
+                ('completa', "Completa"),
+            ],
+            string="Webpay Mode",
         )
     environment = fields.Selection(
-        selection_add=[('integ', 'Integración')],
+            selection_add=[('integ', 'Integración')],
         )
 
     @api.multi

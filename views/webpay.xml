@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<openerp>
+<odoo>
     <data>
         <template id="webpay_acquirer_button">
             <form t-if="acquirer.webpay_commer_code" t-att-action="tx_url" method="post" target="_self">
@@ -70,4 +70,4 @@
           <t t-raw="webpay_redirect" />
         </template>
     </data>
-</openerp>
+</odoo>
