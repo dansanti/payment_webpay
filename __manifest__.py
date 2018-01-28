@@ -12,7 +12,8 @@
     'external_dependencies': {
             'python':[
             'suds',
-            'py-wsse',
+            'wsse',
+            'xmlsec',
             # En Debian/Ubuntu:
             # sudo apt-get install libssl-dev libxml2-dev libxmlsec1-dev
             #    Sistemas basados en RedHat:
