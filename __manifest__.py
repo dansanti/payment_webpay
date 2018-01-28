@@ -9,14 +9,16 @@
     'version': "11.1.0.2",
     'description': """Webpay Payment Acquirer""",
     'depends': ['payment'],
-    'python-depends':[
-        'suds',
-        'py-wsse',
-        # En Debian/Ubuntu:
-        # sudo apt-get install libssl-dev libxml2-dev libxmlsec1-dev
-        #    Sistemas basados en RedHat:
-        # sudo yum install openssl-devel libxml2-devel xmlsec1-devel xmlsec1-openssl-devel libtool-ltdl-devel
-    ],
+    'external_dependencies': {
+            'python':[
+            'suds',
+            'py-wsse',
+            # En Debian/Ubuntu:
+            # sudo apt-get install libssl-dev libxml2-dev libxmlsec1-dev
+            #    Sistemas basados en RedHat:
+            # sudo yum install openssl-devel libxml2-devel xmlsec1-devel xmlsec1-openssl-devel libtool-ltdl-devel
+        ],
+    },
     'data': [
         'views/webpay.xml',
         'views/payment_acquirer.xml',

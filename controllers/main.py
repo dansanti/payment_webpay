@@ -1,12 +1,15 @@
 # -*- coding: utf-8 -*-
+import json
 import logging
 import pprint
-import werkzeug
-import urllib2
 
-from odoo import http, SUPERUSER_ID
-from odoo.addons.web.http import request
+import requests
+import werkzeug
+from werkzeug import urls
+
+from odoo import http
 from odoo.addons.payment.models.payment_acquirer import ValidationError
+from odoo.http import request
 
 _logger = logging.getLogger(__name__)
 
