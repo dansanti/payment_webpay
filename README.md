@@ -8,7 +8,7 @@
 
 Se deben instalar las Librerías
 
-pip3 install xmlsec py-wsse
+pip3 install xmlsec wsse
 
  En Debian/Ubuntu:
 
