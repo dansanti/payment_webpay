@@ -6,12 +6,8 @@
             <field name="model">payment.transaction</field>
             <field name="inherit_id" ref="payment.transaction_form"/>
             <field name="arch" type="xml">
-                <xpath expr='//notebook' position='inside'>
-                    <page string="Webpay TX Details">
-                        <group>
-                            <field name="webpay_txn_type" />
-                        </group>
-                    </page>
+                <xpath expr="//field[@name='acquirer_reference']" position="after">
+                  <field name="webpay_txn_type" />
                 </xpath>
             </field>
         </record>

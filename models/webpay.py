@@ -33,9 +33,11 @@ class PaymentAcquirerWebpay(models.Model):
     @api.model
     def _get_providers(self,):
         providers = super(PaymentAcquirerWebpay, self)._get_providers()
-        providers.append(['webpay', 'Webpay'])
         return providers
 
+    provider = fields.Selection(
+            selection_add=[('webpay', 'Webpay')]
+        )
     webpay_commer_code = fields.Char(
             string="Commerce Code",
             required=True,
@@ -248,6 +250,3 @@ class PaymentTxWebpay(models.Model):
             _logger.warning(error)
             res.update(state='error', state_message=error)
             return tx.write(res)
-
-class PaymentMethod(models.Model):
-    _inherit = 'payment.method'
