@@ -39,8 +39,7 @@ class PaymentAcquirerWebpay(models.Model):
             selection_add=[('webpay', 'Webpay')]
         )
     webpay_commer_code = fields.Char(
-            string="Commerce Code",
-            required=True,
+            string="Commerce Code"
         )
     webpay_private_key = fields.Binary(
             string="User Private Key",

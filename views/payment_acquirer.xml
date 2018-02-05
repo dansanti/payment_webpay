@@ -11,16 +11,15 @@
                 <field name="webpay_mode" attrs="{'invisible':[('provider','!=','webpay')]}"/>
               </field>
                 <xpath expr='//group[@name="acquirer"]' position='after'>
-                  <group>
+                  <group attrs="{'invisible': [('provider', '!=', 'webpay')]}">
                     <field name="webpay_commer_code" />
                   </group>
-                    <group attrs="{'invisible': [('provider', '!=', 'webpay')]}">
-                        <field name="webpay_private_key"/>
-                        <field name="webpay_public_cert"/>
-                        <field name="webpay_cert"/>
-                        <a colspan="2" href="http://odoocoop.cl//test-account-creation" target="_blank">How to configure your Webpay account?</a>
-                    </group>
-
+                  <group attrs="{'invisible': [('provider', '!=', 'webpay')]}">
+                      <field name="webpay_private_key"/>
+                      <field name="webpay_public_cert"/>
+                      <field name="webpay_cert"/>
+                      <a colspan="2" href="http://odoocoop.cl//test-account-creation" target="_blank">How to configure your Webpay account?</a>
+                  </group>
                 </xpath>
             </field>
         </record>
