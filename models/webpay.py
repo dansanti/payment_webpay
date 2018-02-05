@@ -190,7 +190,6 @@ class PaymentTxWebpay(models.Model):
 
         return transactionResultOutput
 
-
     """
     acknowledgeTransaction
     Indica  a Webpay que se ha recibido conforme el resultado de la transaccion
@@ -201,7 +200,8 @@ class PaymentTxWebpay(models.Model):
         acknowledge = client.service.acknowledgeTransaction(token)
         return acknowledge
 
-    def _webpay_form_get_tx_from_data(self, cr, uid, data, context=None):
+    @api.model
+    def _webpay_form_get_tx_from_data(self, data):
         reference, txn_id = data.buyOrder, data.sessionId
         if not reference or not txn_id:
             error_msg = _('Webpay: received data with missing reference (%s) or txn_id (%s)') % (reference, txn_id)
@@ -220,7 +220,8 @@ class PaymentTxWebpay(models.Model):
             raise ValidationError(error_msg)
         return self.browse(cr, uid, tx_ids[0], context=context)
 
-    def _webpay_form_validate(self, cr, uid, tx, data, context=None):
+    @api.multi
+    def _webpay_form_validate(self, data):
         codes = {
                 '0' : 'Transacción aprobada.',
                 '-1' : 'Rechazo de transacción.',
@@ -240,13 +241,13 @@ class PaymentTxWebpay(models.Model):
         if status in ['0']:
             _logger.info('Validated webpay payment for tx %s: set as done' % (tx.reference))
             res.update(state='done', date_validate=data.transactionDate)
-            return tx.write(res)
+            return self.write(res)
         elif status in ['-6', '-7']:
             _logger.warning('Received notification for webpay payment %s: set as pending' % (tx.reference))
             res.update(state='pending', state_message=data.get('pending_reason', ''))
-            return tx.write(res)
+            return self.write(res)
         else:
             error = 'Received unrecognized status for webpay payment %s: %s, set as error' % (tx.reference, codes[status].decode('utf-8'))
             _logger.warning(error)
             res.update(state='error', state_message=error)
-            return tx.write(res)
+            return self.write(res)
