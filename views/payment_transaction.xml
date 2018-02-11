@@ -7,7 +7,7 @@
             <field name="inherit_id" ref="payment.transaction_form"/>
             <field name="arch" type="xml">
                 <xpath expr="//field[@name='acquirer_reference']" position="after">
-                  <field name="webpay_txn_type" />
+                  <field name="webpay_txn_type" attrs="{'invisible': [('provider', '!=', 'webpay')]}"/>
                 </xpath>
             </field>
         </record>
