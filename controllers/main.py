@@ -13,6 +13,10 @@ from odoo.http import request
 
 _logger = logging.getLogger(__name__)
 
+try:
+    import urllib.request as urllib2
+except:
+    _logger.warning('No se puede cargar urllib2')
 
 class WebpayController(http.Controller):
     _accept_url = '/payment/webpay/test/accept'
@@ -77,7 +81,7 @@ class WebpayController(http.Controller):
             Puede ser vacío si la transacción no se autenticó.
         '''
         request.registry['payment.transaction'].form_feedback(cr, uid, resp, 'webpay', context=context)
-        urequest = urllib2.Request(resp.urlRedirection, werkzeug.url_encode({'token_ws': post['token_ws'], }))
+        urequest = urllib2.Request(resp.urlRedirection, werkzeug.url_encode({'token_ws': post['token_ws'], }).encode())
         uopen = urllib2.urlopen(urequest)
         feedback = uopen.read()
         if resp.VCI in ['TSY'] and str(resp.detailOutput[0].responseCode) in [ '0' ]:
@@ -131,10 +135,10 @@ class WebpayController(http.Controller):
         acquirer_id = int(post.get('acquirer_id'))
         acquirer = request.env['payment.acquirer'].browse(acquirer_id)
         result =  acquirer.initTransaction(post)
-        urequest = urllib2.Request(result['url'], werkzeug.url_encode({'token_ws': result['token']}))
+        urequest = urllib2.Request(result['url'], werkzeug.url_encode({'token_ws': result['token']}).encode())
         uopen = urllib2.urlopen(urequest)
         resp = uopen.read()
         values={
             'webpay_redirect': resp,
         }
-        return request.website.render('payment_webpay.webpay_redirect', values)
+        return request.render('payment_webpay.webpay_redirect', values)
