@@ -70,8 +70,7 @@ class WebpayController(http.Controller):
     def webpay_form_feedback(self, acquirer_id=None, **post):
         """ Webpay contacts using GET, at least for accept """
         _logger.info('Webpay: entering form_feedback with post data %s', pprint.pformat(post))  # debug
-        cr, uid, context = request.cr, SUPERUSER_ID, request.context
-        resp = request.registry['payment.transaction'].getTransaction(cr, uid, [], acquirer_id, post['token_ws'], context=context)
+        resp = request.env['payment.transaction'].getTransaction(acquirer_id, post['token_ws'])
         '''
             TSY: Autenticación exitosa
             TSN: Autenticación fallida.
@@ -80,7 +79,7 @@ class WebpayController(http.Controller):
             U3: Error interno en la autenticación.
             Puede ser vacío si la transacción no se autenticó.
         '''
-        request.registry['payment.transaction'].form_feedback(cr, uid, resp, 'webpay', context=context)
+        request.env['payment.transaction'].sudo().form_feedback( resp, 'webpay')
         urequest = urllib2.Request(resp.urlRedirection, werkzeug.url_encode({'token_ws': post['token_ws'], }).encode())
         uopen = urllib2.urlopen(urequest)
         feedback = uopen.read()
