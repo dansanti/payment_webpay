@@ -70,7 +70,10 @@ class WebpayController(http.Controller):
     def webpay_form_feedback(self, acquirer_id=None, **post):
         """ Webpay contacts using GET, at least for accept """
         _logger.info('Webpay: entering form_feedback with post data %s', pprint.pformat(post))  # debug
-        resp = request.env['payment.transaction'].getTransaction(acquirer_id, post['token_ws'])
+        try:
+            resp = request.env['payment.transaction'].getTransaction(acquirer_id, post['token_ws'])
+        except:
+            raise UserError('Ha ocurrido un error al obtener la transacción desde Webpay')
         '''
             TSY: Autenticación exitosa
             TSN: Autenticación fallida.
@@ -87,7 +90,7 @@ class WebpayController(http.Controller):
             values={
                 'webpay_redirect': feedback,
             }
-            return request.website.render('payment_webpay.webpay_redirect', values)
+            return request.render('payment_webpay.webpay_redirect', values)
         return werkzeug.utils.redirect('/shop/payment')
 
 
@@ -98,7 +101,6 @@ class WebpayController(http.Controller):
     def final(self, **post):
         """ Webpay contacts using GET, at least for accept """
         _logger.info('Webpay: entering End with post data %s', pprint.pformat(post))  # debug
-        cr, uid, context = request.cr, SUPERUSER_ID, request.context
         return werkzeug.utils.redirect('/shop/payment/validate')
 
 
