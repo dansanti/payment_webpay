@@ -208,7 +208,7 @@ class PaymentTxWebpay(models.Model):
             raise ValidationError(error_msg)
 
         # find tx -> @TDENOTE use txn_id ?
-        tx_ids = self.pool['payment.transaction'].search(cr, uid, [('reference', '=', reference)], context=context)
+        tx_ids = self.env['payment.transaction'].search([('reference', '=', reference)])
         if not tx_ids or len(tx_ids) > 1:
             error_msg = 'Webpay: received data for reference %s' % (reference)
             if not tx_ids:
@@ -217,7 +217,7 @@ class PaymentTxWebpay(models.Model):
                 error_msg += '; multiple order found'
             _logger.warning(error_msg)
             raise ValidationError(error_msg)
-        return self.browse(cr, uid, tx_ids[0], context=context)
+        return tx_ids[0]
 
     @api.multi
     def _webpay_form_validate(self, data):
@@ -238,15 +238,15 @@ class PaymentTxWebpay(models.Model):
             'webpay_txn_type': data.detailOutput[0].paymentTypeCode,
         }
         if status in ['0']:
-            _logger.info('Validated webpay payment for tx %s: set as done' % (tx.reference))
+            _logger.info('Validated webpay payment for tx %s: set as done' % (self.reference))
             res.update(state='done', date_validate=data.transactionDate)
             return self.write(res)
         elif status in ['-6', '-7']:
-            _logger.warning('Received notification for webpay payment %s: set as pending' % (tx.reference))
+            _logger.warning('Received notification for webpay payment %s: set as pending' % (self.reference))
             res.update(state='pending', state_message=data.get('pending_reason', ''))
             return self.write(res)
         else:
-            error = 'Received unrecognized status for webpay payment %s: %s, set as error' % (tx.reference, codes[status].decode('utf-8'))
+            error = 'Received unrecognized status for webpay payment %s: %s, set as error' % (self.reference, codes[status].decode('utf-8'))
             _logger.warning(error)
             res.update(state='error', state_message=error)
             return self.write(res)
