@@ -10,6 +10,7 @@ from werkzeug import urls
 from odoo import http
 from odoo.addons.payment.models.payment_acquirer import ValidationError
 from odoo.http import request
+from odoo.exceptions import UserError
 
 _logger = logging.getLogger(__name__)
 
@@ -83,15 +84,16 @@ class WebpayController(http.Controller):
             Puede ser vacío si la transacción no se autenticó.
         '''
         request.env['payment.transaction'].sudo().form_feedback( resp, 'webpay')
-        urequest = urllib2.Request(resp.urlRedirection, werkzeug.url_encode({'token_ws': post['token_ws'], }).encode())
-        uopen = urllib2.urlopen(urequest)
-        feedback = uopen.read()
         if resp.VCI in ['TSY'] and str(resp.detailOutput[0].responseCode) in [ '0' ]:
+            urequest = urllib2.Request(resp.urlRedirection, werkzeug.url_encode({'token_ws': post['token_ws'], }).encode())
+            uopen = urllib2.urlopen(urequest)
+            feedback = uopen.read()
             values={
                 'webpay_redirect': feedback,
             }
             return request.render('payment_webpay.webpay_redirect', values)
-        return werkzeug.utils.redirect('/shop/payment')
+        request.website.sale_reset()
+        return werkzeug.utils.redirect('/shop/confirmation')
 
 
     @http.route([

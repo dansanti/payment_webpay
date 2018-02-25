@@ -236,17 +236,24 @@ class PaymentTxWebpay(models.Model):
         res = {
             'acquirer_reference': data.detailOutput[0].authorizationCode,
             'webpay_txn_type': data.detailOutput[0].paymentTypeCode,
+            'date_validate' : data.transactionDate,
         }
         if status in ['0']:
             _logger.info('Validated webpay payment for tx %s: set as done' % (self.reference))
-            res.update(state='done', date_validate=data.transactionDate)
-            return self.write(res)
+            res.update(state='done')
         elif status in ['-6', '-7']:
             _logger.warning('Received notification for webpay payment %s: set as pending' % (self.reference))
             res.update(state='pending', state_message=data.get('pending_reason', ''))
-            return self.write(res)
+        elif status in ['-1', '-4']:
+            res.update(state='cancel')
         else:
-            error = 'Received unrecognized status for webpay payment %s: %s, set as error' % (self.reference, codes[status].decode('utf-8'))
+            error = 'Received unrecognized status for webpay payment %s: %s, set as error' % (self.reference, codes[status])
             _logger.warning(error)
             res.update(state='error', state_message=error)
-            return self.write(res)
+        return self.write(res)
+
+    def _confirm_so(self):
+        if self.state not in ['cancel']:
+            return super(PaymentTxWebpay, self)._confirm_so()
+        self.sale_order_id.action_cancel()
+        return True

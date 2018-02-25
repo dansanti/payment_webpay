@@ -8,8 +8,11 @@
     'website': 'https://odoocoop.cl',
     'version': "1.1.0",
     'description': """Webpay Payment Acquirer""",
-    'depends': ['payment'],
-    'external_dependencies': {
+    'depends': [
+                'payment',
+                'sale_payment',
+            ],
+        'external_dependencies': {
             'python':[
             'suds',
             #'wsse',
