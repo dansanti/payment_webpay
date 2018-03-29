@@ -18,43 +18,30 @@ try:
     from .wsse.suds import WssePlugin
     from suds.transport.https import HttpTransport
 except:
-    _logger.warning("No Load suds or wsse")
+    _logger.info("No Load suds or wsse")
 
 URLS ={
     'integ': 'https://webpay3gint.transbank.cl/WSWebpayTransaction/cxf/WSWebpayService?wsdl',
     'test': 'https://webpay3gint.transbank.cl/WSWebpayTransaction/cxf/WSWebpayService?wsdl',
-    'prod': 'https://webpay3g.transbank.cl//WSWebpayTransaction/cxf/WSWebpayService?wsdl',
+    'prod': 'https://webpay3g.transbank.cl/WSWebpayTransaction/cxf/WSWebpayService?wsdl'
 }
 
 class PaymentAcquirerWebpay(models.Model):
     _inherit = 'payment.acquirer'
 
     @api.model
-    def _get_providers(self,):
+    def _get_providers(self):
         providers = super(PaymentAcquirerWebpay, self)._get_providers()
         providers.append(['webpay', 'Webpay'])
         return providers
 
-    webpay_commer_code = fields.Char(
-        string="Commerce Code",)
-    webpay_private_key = fields.Binary(
-        string="User Private Key",)
-    webpay_public_cert = fields.Binary(
-        string="User Public Cert",)
-    webpay_cert = fields.Binary(
-        string='Webpay Cert',)
-    webpay_mode = fields.Selection(
-        [
-            ('normal', "Normal"),
-            ('mall', "Normal Mall"),
-            ('oneclick', "OneClick"),
-            ('completa', "Completa"),
-        ],
-        string="Webpay Mode",
-        )
-    environment = fields.Selection(
-        selection_add=[('integ', 'Integración')],
-        )
+    webpay_commer_code = fields.Char('Commerce Code')
+    webpay_private_key = fields.Binary('User Private Key')
+    webpay_public_cert = fields.Binary('User Public Cert')
+    webpay_cert = fields.Binary('Webpay Cert')
+    webpay_mode = fields.Selection([('normal', 'Normal'),('mall', 'Normal Mall'),
+					('oneclick', 'OneClick'),('completa', 'Completa')], 'Webpay Mode')
+    environment = fields.Selection(selection_add=[('integ', 'Integracion')])
 
     @api.multi
     def _get_feature_support(self):
@@ -67,28 +54,31 @@ class PaymentAcquirerWebpay(models.Model):
         return url
 
     @api.multi
-    def webpay_form_generate_values(self, values):
+    def webpay_form_generate_values(self, partner_values, tx_values):
         base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url')
-        values.update({
+
+	tx_values.update({
             'business': self.company_id.name,
-            'item_name': '%s: %s' % (self.company_id.name, values['reference']),
-            'item_number': values['reference'],
-            'amount': values['amount'],
-            'currency_code': values['currency'] and values['currency'].name or '',
-            'address1': values.get('partner_address'),
-            'city': values.get('partner_city'),
-            'country': values.get('partner_country') and values.get('partner_country').code or '',
-            'state': values.get('partner_state') and (values.get('partner_state').code or values.get('partner_state').name) or '',
-            'email': values.get('partner_email'),
-            'zip_code': values.get('partner_zip'),
-            'first_name': values.get('partner_first_name'),
-            'last_name': values.get('partner_last_name'),
-            'return_url': base_url + '/payment/webpay/final'
-        })
-        return values
+            'item_name': '%s: %s' % (self.company_id.name, tx_values.get('reference', False)),
+            'item_number': tx_values.get('reference', False),
+	    'amount': tx_values.get('amount', False),
+            'currency_code': tx_values.get('currency', False) and tx_values.get('currency').name or '',
+            'return_url': base_url + '/payment/webpay/final',
+
+            'address1': partner_values.get('address'),
+            'city': partner_values.get('city'),
+            'country': partner_values.get('country') and partner_values.get('country').code or '',
+	    'state': partner_values.get('state') and (partner_values.get('state').code \
+									or partner_values.get('state').name) or '',
+            'email': partner_values.get('email'),
+            'zip_code': partner_values.get('zip'),
+            'first_name': partner_values.get('first_name'),
+            'last_name': partner_values.get('last_name')
+	})
+        return partner_values, tx_values
 
     @api.multi
-    def webpay_get_form_action_url(self,):
+    def webpay_get_form_action_url(self):
         base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url')
         return base_url +'/payment/webpay/redirect'
 
@@ -101,19 +91,19 @@ class PaymentAcquirerWebpay(models.Model):
     def get_WebPay_cert(self):
         return b64decode(self.webpay_cert)
 
-    def get_client(self,):
-        transport=HttpTransport()
+    def get_client(self):
+        transport = HttpTransport()
         wsse = Security()
 
         return Client(
             self._get_webpay_urls(),
-            transport=transport,
-            wsse=wsse,
-            plugins=[
+            transport = transport,
+            wsse = wsse,
+            plugins = [
                 WssePlugin(
-                    keyfile=self.get_private_key(),
-                    certfile=self.get_public_cert(),
-                    their_certfile=self.get_WebPay_cert(),
+                    keyfile = self.get_private_key(),
+                    certfile = self.get_public_cert(),
+                    their_certfile = self.get_WebPay_cert(),
                 ),
             ],
         )
@@ -151,6 +141,7 @@ class PaymentAcquirerWebpay(models.Model):
         wsInitTransactionOutput = client.service.initTransaction(init)
 
         return wsInitTransactionOutput
+PaymentAcquirerWebpay()
 
 
 class PaymentTxWebpay(models.Model):
@@ -177,8 +168,8 @@ class PaymentTxWebpay(models.Model):
         client = acquirer_id.get_client()
         client.options.cache.clear()
 
-        transactionResultOutput = client.service.getTransactionResult(token)
-        acknowledge = self.acknowledgeTransaction(acquirer_id, token)
+    	transactionResultOutput = client.service.getTransactionResult(token)
+    	acknowledge = self.acknowledgeTransaction(acquirer_id, token)
 
         return transactionResultOutput
 
@@ -234,7 +225,7 @@ class PaymentTxWebpay(models.Model):
             res.update(state='done', date_validate=data.transactionDate)
             return tx.write(res)
         elif status in ['-6', '-7']:
-            _logger.warning('Received notification for webpay payment %s: set as pending' % (tx.reference))
+            _logger.info('Received notification for webpay payment %s: set as pending' % (tx.reference))
             res.update(state='pending', state_message=data.get('pending_reason', ''))
             return tx.write(res)
         else:
@@ -242,6 +233,4 @@ class PaymentTxWebpay(models.Model):
             _logger.warning(error)
             res.update(state='error', state_message=error)
             return tx.write(res)
-
-class PaymentMethod(models.Model):
-    _inherit = 'payment.method'
+PaymentTxWebpay()

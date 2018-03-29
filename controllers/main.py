@@ -21,7 +21,7 @@ class WebpayController(http.Controller):
         reference, txn_id = data.get('item_number'), data.get('txn_id')
         if not reference or not txn_id:
             error_msg = _('Paypal: received data with missing reference (%s) or txn_id (%s)') % (reference, txn_id)
-            _logger.warning(error_msg)
+            _logger.info(error_msg)
             raise ValidationError(error_msg)
 
         # find tx -> @TDENOTE use txn_id ?
@@ -32,7 +32,7 @@ class WebpayController(http.Controller):
                 error_msg += '; no order found'
             else:
                 error_msg += '; multiple order found'
-            _logger.warning(error_msg)
+            _logger.info(error_msg)
             raise ValidationError(error_msg)
         return self.browse(cr, uid, tx_ids[0], context=context)
 
@@ -47,12 +47,12 @@ class WebpayController(http.Controller):
             res.update(state='done', date_validate=data.get('payment_date', fields.datetime.now()))
             return tx.write(res)
         elif status in ['Pending', 'Expired']:
-            _logger.warning('Received notification for Paypal payment %s: set as pending' % (tx.reference))
+            _logger.info('Received notification for Paypal payment %s: set as pending' % (tx.reference))
             res.update(state='pending', state_message=data.get('pending_reason', ''))
             return tx.write(res)
         else:
             error = 'Received unrecognized status for Paypal payment %s: %s, set as error' % (tx.reference, status)
-            _logger.warning(error)
+            _logger.info(error)
             res.update(state='error', state_message=error)
             return tx.write(res)
 
@@ -127,7 +127,7 @@ class WebpayController(http.Controller):
     def redirect_webpay(self, **post):
         acquirer_id = int(post.get('acquirer_id'))
         acquirer = request.env['payment.acquirer'].browse(acquirer_id)
-        result =  acquirer.initTransaction(post)
+        result = acquirer.initTransaction(post)
         urequest = urllib2.Request(result['url'], werkzeug.url_encode({'token_ws': result['token']}))
         uopen = urllib2.urlopen(urequest)
         resp = uopen.read()
