@@ -26,6 +26,7 @@ class WebpayController(http.Controller):
     _cancel_url = '/payment/webpay/test/cancel'
 
     def _webpay_form_get_tx_from_data(self, cr, uid, data, context=None):
+        _logger.info('Webpay: entering form_get_tx with post data %s', pprint.pformat(data))  # debug
         reference, txn_id = data.get('item_number'), data.get('txn_id')
         if not reference or not txn_id:
             error_msg = _('Paypal: received data with missing reference (%s) or txn_id (%s)') % (reference, txn_id)
@@ -45,6 +46,7 @@ class WebpayController(http.Controller):
         return self.browse(cr, uid, tx_ids[0], context=context)
 
     def _webpay_form_validate(self, cr, uid, tx, data, context=None):
+        _logger.info('Webpay: entering form_validate with post data %s', pprint.pformat(data))  # debug
         status = data.get('payment_status')
         res = {
             'acquirer_reference': data.get('txn_id'),
@@ -71,10 +73,13 @@ class WebpayController(http.Controller):
     def webpay_form_feedback(self, acquirer_id=None, **post):
         """ Webpay contacts using GET, at least for accept """
         _logger.info('Webpay: entering form_feedback with post data %s', pprint.pformat(post))  # debug
+        token_ws = post.get('token_ws') or post.get('TBK_TOKEN')
         try:
-            resp = request.env['payment.transaction'].getTransaction(acquirer_id, post['token_ws'])
+            resp = request.env['payment.transaction'].getTransaction(acquirer_id, token_ws)
         except:
-            raise UserError('Ha ocurrido un error al obtener la transacción desde Webpay')
+            resp = False
+            if not post.get('TBK_TOKEN'):
+                raise UserError('Ha ocurrido un error al obtener la transacción desde Webpay')
         '''
             TSY: Autenticación exitosa
             TSN: Autenticación fallida.
@@ -83,26 +88,31 @@ class WebpayController(http.Controller):
             U3: Error interno en la autenticación.
             Puede ser vacío si la transacción no se autenticó.
         '''
-        request.env['payment.transaction'].sudo().form_feedback( resp, 'webpay')
-        if resp.VCI in ['TSY'] and str(resp.detailOutput[0].responseCode) in [ '0' ]:
-            urequest = urllib2.Request(resp.urlRedirection, werkzeug.url_encode({'token_ws': post['token_ws'], }).encode())
-            uopen = urllib2.urlopen(urequest)
-            feedback = uopen.read()
-            values={
-                'webpay_redirect': feedback,
-            }
-            return request.render('payment_webpay.webpay_redirect', values)
-        request.website.sale_reset()
+        if resp:
+            request.env['payment.transaction'].sudo().form_feedback( resp, 'webpay')
+            if resp.VCI in ['TSY'] and str(resp.detailOutput[0].responseCode) in [ '0' ]:
+                urequest = urllib2.Request(resp.urlRedirection, werkzeug.url_encode({'token_ws': token_ws }).encode())
+                uopen = urllib2.urlopen(urequest)
+                feedback = uopen.read()
+                values={
+                    'webpay_redirect': feedback,
+                }
+                return request.render('payment_webpay.webpay_redirect', values)
+            request.website.sale_reset()
+        elif post.get('TBK_ORDEN_COMPRA'):
+            tx = request.env['payment.transaction'].sudo().search([('reference', '=', post.get('TBK_ORDEN_COMPRA'))])
+            tx.write({'state': 'error', 'state_message': 'Pago cancelado (abortado en formulario Webpay)'})
         return werkzeug.utils.redirect('/shop/confirmation')
 
 
     @http.route([
-        '/payment/webpay/final',
-        '/payment/webpay/test/final',
+        '/payment/webpay/final/<model("payment.acquirer"):acquirer_id>',
     ], type='http', auth='public', csrf=False, website=True)
-    def final(self, **post):
+    def final(self, acquirer_id=False, **post):
         """ Webpay contacts using GET, at least for accept """
         _logger.info('Webpay: entering End with post data %s', pprint.pformat(post))  # debug
+        if post.get('TBK_TOKEN'):
+            return self.webpay_form_feedback(acquirer_id, **post)
         return werkzeug.utils.redirect('/shop/payment/validate')
 
 

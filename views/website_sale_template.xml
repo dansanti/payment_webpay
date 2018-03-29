@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <template id="payment_confirmation_status" inherit_id="website_sale.payment_confirmation_status">
+        <div class="panel-body" position="after">
+            <div class="panel-body" t-if="order.payment_tx_id.state_message">
+                <t t-raw="order.payment_tx_id.state_message" />
+            </div>
+        </div>
+    </template>
+</odoo>
