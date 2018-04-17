@@ -11,6 +11,7 @@ from odoo.tools.float_utils import float_compare, float_repr
 from odoo.tools.safe_eval import safe_eval
 from odoo.tools.translate import _
 from base64 import b64decode
+import os
 
 _logger = logging.getLogger(__name__)
 try:
@@ -18,13 +19,16 @@ try:
     from suds.wsse import Security, Timestamp
     from .wsse.suds import WssePlugin
     from suds.transport.https import HttpTransport
+    from suds.cache import ObjectCache
+    cache_path = "/tmp/{0}-suds".format(os.getuid())
+    cache = ObjectCache(cache_path)
 except:
     _logger.warning("No Load suds or wsse")
 
 URLS ={
     'integ': 'https://webpay3gint.transbank.cl/WSWebpayTransaction/cxf/WSWebpayService?wsdl',
     'test': 'https://webpay3gint.transbank.cl/WSWebpayTransaction/cxf/WSWebpayService?wsdl',
-    'prod': 'https://webpay3g.transbank.cl//WSWebpayTransaction/cxf/WSWebpayService?wsdl',
+    'prod': 'https://webpay3g.transbank.cl/WSWebpayTransaction/cxf/WSWebpayService?wsdl',
 }
 
 class PaymentAcquirerWebpay(models.Model):
@@ -123,6 +127,7 @@ class PaymentAcquirerWebpay(models.Model):
                     their_certfile=self.get_WebPay_cert(),
                 ),
             ],
+            cache=cache,
         )
 
     """
