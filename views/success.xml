@@ -1,0 +1,176 @@
+<?xml version="1.0" encoding="utf-8"?>
+<openerp>
+	<data>
+		<template id="payment_webpay.exito" name="Success">
+			<t t-call="website.layout">
+				<t t-set="additional_title">Exito</t>
+				<div class="container">
+					<!--<t t-if="website.limpiaCache()"/>-->
+					<div class="row">
+						<div class="col-xs-6">
+							<h1>
+								<a href="/" class="navbar-brand logo">
+								<!--<img src="/website/static/src/img/LOGO_2014.png" height="79" width="180"/>-->
+								</a>
+							</h1>
+						</div>
+						<div class="col-xs-6 text-right">
+							<h1>Comprobante de pago</h1>
+						<!--	<h1><small>Orden de compra <t t-esc="tx.reference"/> </small></h1>-->
+						</div>
+					</div>
+					<div class="row">
+						<div class="col-xs-6">
+							<div class="panel panel-default">
+								<div class="panel-heading">
+									<h4>Datos Transaccion</h4>
+								</div>
+								<div class="panel-body">
+							<p>TX: <t t-raw="tx"/></p>
+							<!--		<p>
+										<b>Nombre del comercio : </b>
+										<t t-esc="tx.sale_order_id.company_id.name"/>
+										<br/>
+										<b>Metodo de pago : </b> Webpay (Transbank)
+										<br/>
+										<b>Pedido : </b>
+										<t t-esc="tx.reference" />
+										<br/>
+										<b>Fecha del pedido : </b>
+										<t t-esc="tx.date_validate" />
+										<br/>
+										<b>Metodo de pago : </b> Por venta de producto
+										<br/>
+										<b>URL del comercio : </b> http://mcielectronics.cl
+										<br/>
+										<b>Tipo transaccion : </b> Venta
+										<br/>
+										<b>Codigo Autorización : </b>
+										<t t-esc="tx.webpay_authorization_code "/>
+										<br/>
+										<b>Numero de tarjeta : </b>
+										<t t-esc="tx.webpay_last_four"/>
+										<br/>
+										<b>Tipo de pago : </b>
+										<t t-esc="tx.webpay_payment_type"/>
+										<br/>
+										<b>Tipo de cuotas : </b>
+										<t t-esc="tx.webpay_quota_type"/>
+										<br/>
+										<b>Cantidad de cuotas:  </b>
+										<t t-esc="tx.webpay_quota_number"/>
+										<br/>
+										<b>Moneda : </b>
+										<t t-esc="tx.currency_id.name"/>
+										<br/>-
+									</p>-->
+								</div>
+							</div>
+						</div>
+						<div class="col-xs-6">
+							<div class="panel panel-default">
+								<div class="panel-heading">
+									<h4>Comprado por :</h4>
+								</div>
+								<div class="panel-body">
+									<p>
+									<!--	<t t-esc="tx.partner_name"/>
+										<br/>
+										<t t-esc="tx.partner_email"/>
+										<br/>
+										<t t-esc="tx.partner_address"/>
+										<br/>
+										<t t-esc="tx.partner_city"/>
+										<br/>
+										<t t-esc="tx.partner_country_id.name"/>
+										<br/>-->
+									</p>
+								</div>
+							</div>
+						</div>
+						<div class="col-xs-6">
+							<div class="panel panel-default">
+								<div class="panel-heading">
+									<h4>Políticas de devolución</h4>
+								</div>
+								<div class="panel-body">
+									<p>
+										<!--<t t-esc="tx.acquirer_id.webpay_refund_policy"/>-->
+									</p>
+								</div>
+							</div>
+						</div>
+					</div>
+					<table class="table table-bordered">
+						<thead>
+							<tr>
+								<th>
+									<h4>Descripcion</h4>
+								</th>
+								<th>
+									<h4>Precio (Unitario)</h4>
+								</th>
+								<th>
+									<h4>Codigo Producto</h4>
+								</th>
+								<th>
+									<h4>Cantidad</h4>
+								</th>
+								<th>
+									<h4>Total</h4>
+								</th>
+							</tr>
+						</thead>
+						<tbody>
+<!--							<t t-foreach="tx.sale_order_id.order_line" t-as="line">
+								<t t-if="tx.sale_order_id.carrier_id.name != line.name">
+									<tr>-->
+										<!-- <t t-if="line.product_id.product_tmpl_id.author.name">
+										     <td><t t-esc="'%s - %s' % (line.product_id.product_tmpl_id.author.name, line.product_id.product_tmpl_id.name)"/></td>
+								</t> -->
+								<!-- <t t-if="not line.product_id.product_tmpl_id.author.name"> -->
+<!--										<td>
+											<t t-esc="line.product_id.product_tmpl_id.name"/>
+										</td>-->
+								<!-- </t> -->
+	<!--									<td>$ <t t-esc="'%.f' % line.price_unit"/></td>
+										<td>
+											<t t-esc="line.product_id.ean13 or line.product_id.default_code"/>
+										</td>
+										<td>
+											<t t-esc="'%.f' % line.product_uom_qty"/>
+										</td>
+										<td>$ <t t-esc="'%.f' % (line.price_unit * line.product_uom_qty)"/></td>
+									</tr>
+								</t>
+							</t>-->
+						</tbody>
+					</table>
+					<div class="row text-right">
+						<div class="col-xs-2 col-xs-offset-8">
+							<p>
+								<strong>
+									Sub Total Sin IVA: <br/>
+									IVA : <br/>
+									Envío: <br/>
+									Total : <br/>
+								</strong>
+							</p>
+						</div>
+						<div class="col-xs-2">
+							<strong>
+							<!--	$ <t t-esc="'%.f' % (tx.sale_order_id.amount_untaxed - tx.sale_order_id.amount_delivery)"/> <br/>
+								$ <t t-esc="'%.f' % tx.sale_order_id.amount_tax"/><br/>
+								$ <t t-esc="'%.f' % tx.sale_order_id.amount_delivery"/> <br/>
+								$ <t t-esc="'%.f' % tx.sale_order_id.amount_total"/><br/>
+								<t t-if="tx.sale_order_id.carrier_id.name">
+									<t t-esc="'Enviado por %s con un costo de $%.f' % (tx.sale_order_id.carrier_id.name, tx.sale_order_id.amount_delivery)"/> <br/>
+								</t>-->
+							</strong>
+						</div>
+					</div>
+				</div>
+			</t>
+		</template>
+	</data>
+</openerp>
