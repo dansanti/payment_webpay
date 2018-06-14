@@ -127,7 +127,7 @@ class PaymentAcquirerWebpay(models.Model):
         init.buyOrder = post['item_number']
         init.sessionId = self.company_id.id
         init.returnURL = base_url + '/payment/webpay/return/'+str(self.id)
-        init.finalURL =  post['return_url']
+        init.finalURL = '%s/%s' % (post['return_url'], self.id)
 
         detail = client.factory.create('wsTransactionDetail')
         detail.amount = post['amount']

@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<openerp>
+	<data>
+		<template id="payment_webpay.fracaso" name="Failure">
+			<!--<t t-if="website.limpiaCache()"/>-->
+			<t t-call="website.layout">
+				<t t-set="additional_title">Fracaso</t>
+				<t t-if="tx">
+					<div class="oe_structure oe_empty">
+						<div class="container">
+							<h1 class="mt32">Transacción rechazada, numero de order <t t-esc="tx.reference"/></h1>
+							<br/> Las posibles causas de este rechazo son:<br/>
+							<br/>
+							- Error en el ingreso de los datos de su tarjeta de <strong>Crédito o Debito</strong> (fecha y/o código de seguridad).<br/>
+							- Su tarjeta de <strong>Crédito o Debito</strong> no cuenta con el cupo o saldo necesario para pagar la compra.<br/>
+							- Tarjeta aún no habilitada en el sistema financiero.<br/>
+						</div>
+					</div>
+				</t>
+				<t t-if="not tx"> 
+					<div class="oe_structure oe_empty">
+						<div class="container">
+							<h1 class="mt32">Ha ocurrido un error al obtener la transacción desde Webpay.</h1>
+						</div>
+					</div>
+				</t>
+			</t>
+		</template>
+	</data>
+</openerp>

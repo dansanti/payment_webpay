@@ -9,7 +9,7 @@
 				<xpath expr='//notebook' position='inside'>
 					<page string="Webpay TX Details">
 						<group>
-							<field name="webpay_txn_type" />
+							<field name="webpay_txn_type"/>
 						</group>
 					</page>
 				</xpath>

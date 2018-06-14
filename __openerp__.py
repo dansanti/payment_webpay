@@ -21,6 +21,9 @@
 		'views/webpay.xml',
 		'views/payment_acquirer.xml',
 		'views/payment_transaction.xml',
+#		'views/website_sale_tempate.xml',
+		'views/success.xml',
+		'views/failure.xml',
 		'data/webpay.xml'
 	],
 	'installable': True,
