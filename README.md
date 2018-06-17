@@ -1,3 +1,4 @@
+Por favor migrar a https://gitlab.com/dansanti/payment_webpay
 # Pasarela de pagos Webpay para Odoo
 
 - Nos basamos en payment_paypal y payment_ogone
