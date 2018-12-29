@@ -27,7 +27,19 @@
         </template>
 
         <template id="webpay_redirect" name="webpay_redirect">
-          <t t-raw="webpay_redirect" />
+            <t t-if="url">
+            <html>
+                <body>
+                    <form id="redir" t-att-action="url" method="post" target="_self">
+                        <input type="hidden" name="token_ws" t-att-value="token_ws"/>
+                    </form>
+                </body>
+                <script>
+                    document.getElementById('redir').submit();
+                </script>
+            </html>
+          </t>
+          <t t-else="" t-raw="webpay_redirect" />
         </template>
     </data>
 </odoo>

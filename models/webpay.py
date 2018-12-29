@@ -1,14 +1,8 @@
 # -*- coding: utf-'8' "-*-"
-
-import datetime
-from hashlib import sha1
 import logging
-import socket
-from odoo import SUPERUSER_ID
 from odoo import api, models, fields
 from odoo.tools import float_round, DEFAULT_SERVER_DATE_FORMAT
 from odoo.tools.float_utils import float_compare, float_repr
-from odoo.tools.safe_eval import safe_eval
 from odoo.tools.translate import _
 from base64 import b64decode
 import os
@@ -16,7 +10,7 @@ import os
 _logger = logging.getLogger(__name__)
 try:
     from suds.client import Client
-    from suds.wsse import Security, Timestamp
+    from suds.wsse import Security
     from .wsse.suds import WssePlugin
     from suds.transport.https import HttpTransport
     from suds.cache import ObjectCache
@@ -24,12 +18,14 @@ try:
     cache = ObjectCache(cache_path)
 except:
     _logger.warning("No Load suds or wsse")
+    pass
 
 URLS ={
     'integ': 'https://webpay3gint.transbank.cl/WSWebpayTransaction/cxf/WSWebpayService?wsdl',
     'test': 'https://webpay3gint.transbank.cl/WSWebpayTransaction/cxf/WSWebpayService?wsdl',
     'prod': 'https://webpay3g.transbank.cl/WSWebpayTransaction/cxf/WSWebpayService?wsdl',
 }
+
 
 class PaymentAcquirerWebpay(models.Model):
     _inherit = 'payment.acquirer'
@@ -101,21 +97,20 @@ class PaymentAcquirerWebpay(models.Model):
     @api.multi
     def webpay_get_form_action_url(self,):
         base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url')
-        return base_url +'/payment/webpay/redirect'
+        return base_url + '/payment/webpay/redirect'
 
     def get_private_key(self):
-        return b64decode(self.webpay_private_key)
+        return b64decode(self.sudo().webpay_private_key)
 
     def get_public_cert(self):
-        return b64decode(self.webpay_public_cert)
+        return b64decode(self.sudo().webpay_public_cert)
 
     def get_WebPay_cert(self):
-        return b64decode(self.webpay_cert)
+        return b64decode(self.sudo().webpay_cert)
 
     def get_client(self,):
-        transport=HttpTransport()
+        transport = HttpTransport()
         wsse = Security()
-
         return Client(
             self._get_webpay_urls(),
             transport=transport,
@@ -149,7 +144,7 @@ class PaymentAcquirerWebpay(models.Model):
         init.buyOrder = post['item_number']
         init.sessionId = self.company_id.id
         init.returnURL = base_url + '/payment/webpay/return/'+str(self.id)
-        init.finalURL =  post['return_url']+'/'+str(self.id)
+        init.finalURL = post['return_url'] + '/' + str(self.id)
 
         detail = client.factory.create('wsTransactionDetail')
         detail.amount = post['amount']
@@ -158,7 +153,7 @@ class PaymentAcquirerWebpay(models.Model):
         detail.buyOrder = post['item_number']
 
         init.transactionDetails.append(detail)
-        init.wPMDetail=client.factory.create('wpmDetailInput')
+        init.wPMDetail = client.factory.create('wpmDetailInput')
 
         wsInitTransactionOutput = client.service.initTransaction(init)
 
@@ -169,12 +164,12 @@ class PaymentTxWebpay(models.Model):
     _inherit = 'payment.transaction'
 
     webpay_txn_type = fields.Selection([
-            ('VD','Venta Debito'),
-            ('VN','Venta Normal'),
-            ('VC','Venta en cuotas'),
-            ('SI','3 cuotas sin interés'),
-            ('S2','cuotas sin interés'),
-            ('NC','N Cuotas sin interés'),
+            ('VD', 'Venta Debito'),
+            ('VN', 'Venta Normal'),
+            ('VC', 'Venta en cuotas'),
+            ('SI', '3 cuotas sin interés'),
+            ('S2', 'cuotas sin interés'),
+            ('NC', 'N Cuotas sin interés'),
         ],
        string="Webpay Tipo Transacción")
 
@@ -188,10 +183,12 @@ class PaymentTxWebpay(models.Model):
     def getTransaction(self, acquirer_id, token):
         client = acquirer_id.get_client()
         client.options.cache.clear()
-
         transactionResultOutput = client.service.getTransactionResult(token)
         acknowledge = self.acknowledgeTransaction(acquirer_id, token)
-
+        if not acknowledge:
+            _logger.warning("not acknowledge %s" % acknowledge)
+        else:
+            _logger.warning("acknowledge")
         return transactionResultOutput
 
     """
@@ -227,21 +224,21 @@ class PaymentTxWebpay(models.Model):
     @api.multi
     def _webpay_form_validate(self, data):
         codes = {
-                '0' : 'Transacción aprobada.',
-                '-1' : 'Rechazo de transacción.',
-                '-2' : 'Transacción debe reintentarse.',
-                '-3' : 'Error en transacción.',
-                '-4' : 'Rechazo de transacción.',
-                '-5' : 'Rechazo por error de tasa.',
-                '-6' : 'Excede cupo máximo mensual.',
-                '-7' : 'Excede límite diario por transacción.',
-                '-8' : 'Rubro no autorizado.',
+                '0': 'Transacción aprobada.',
+                '-1': 'Rechazo de transacción.',
+                '-2': 'Transacción debe reintentarse.',
+                '-3': 'Error en transacción.',
+                '-4': 'Rechazo de transacción.',
+                '-5': 'Rechazo por error de tasa.',
+                '-6': 'Excede cupo máximo mensual.',
+                '-7': 'Excede límite diario por transacción.',
+                '-8': 'Rubro no autorizado.',
             }
         status = str(data.detailOutput[0].responseCode)
         res = {
             'acquirer_reference': data.detailOutput[0].authorizationCode,
             'webpay_txn_type': data.detailOutput[0].paymentTypeCode,
-            'date_validate' : data.transactionDate,
+            'date_validate': data.transactionDate,
         }
         if status in ['0']:
             _logger.info('Validated webpay payment for tx %s: set as done' % (self.reference))

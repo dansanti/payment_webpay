@@ -6,7 +6,7 @@
     'author': 'Daniel Santibáñez Polanco',
     'summary': 'Payment Acquirer: Webpay Implementation',
     'website': 'https://odoocoop.cl',
-    'version': "1.2.1",
+    'version': "1.2.2",
     'description': """Webpay Payment Acquirer""",
     'depends': [
                 'payment',
@@ -17,7 +17,7 @@
             'suds',
             #'wsse',
             'xmlsec',
-            'urllib',
+            'urllib3',
             # En Debian/Ubuntu:
             # sudo apt-get install libssl-dev libxml2-dev libxmlsec1-dev
             #    Sistemas basados en RedHat:
